@@ -1,0 +1,70 @@
+# Portfolio Patch Roadmap
+
+- [x] FAQ section (8 items, between Blog and Contact, accordion, keyboard accessible)
+- [x] Full-screen editorial navigation overlay (staggered reveal, ESC + X close, working links)
+- [x] Side navigation reworked into a subtle scroll progress indicator
+- [x] Removed the marked animated network background element
+- [x] Blog READ opens real article pages at /thoughts/<slug> with working back links
+- [x] Article typography + entry animation, reduced-motion respected
+- [x] Verified build, interactions, no horizontal overflow
+- [x] Journey redesigned as pinned scroll-driven train (parallax, station, memory compression)
+- [x] Preloader eye replaced with the uploaded hand-drawn blink, straightened and slowed
+- [x] Cinematic preloader: dark intro → eye opens → AKSH fragments assemble → hands off to hero
+- [x] Selected Work rebuilt as a continuously moving editorial archive rail (hover/tap pauses all, expands details, links hide when absent)
+- [x] Services rebuilt as a horizontal scanner with centre focus, per-service glyphs and capability reveal
+- [x] Journey: vertical bottom-to-top train on tablet/mobile
+- [x] Journey: removed circular element from event cards
+- [x] Journey: city-specific environments (Lisbon, Copenhagen, Seoul, New York)
+- [x] Hero: wordmark + character composition rules for tablet/mobile
+- [x] Preloader eye: triangular frame removed, cleaned eye artwork wired in
+- [x] Final sweep at 1440/1280/1024/768/430/390/375 — no horizontal overflow
+- [ ] Replace placeholder GitHub / live demo links with real project URLs
+- [x] Services: replaced overlapping fan with a focus grid (no overlap at any size)
+- [x] Toolbox: scroll stack shows exactly one card at a time
+- [x] Achievements: vertical list on mobile/tablet (fan kept on desktop ≥1100px)
+- [x] Blog: hovering a post hides the title and shows a short article glimpse
+- [x] Fixed first-tap open/close glitch on Services, Achievements, Selected Work and Blog (focus vs click)
+- [x] Smooth, slow global scrolling (Lenis) with preloader/menu scroll locks and eased nav jumps
+- [x] Toolbox: layered stack — earlier cards stay behind the current one (blurred, dimmed), next card slides up over it
+- [x] Selected Work: hover no longer fights the centring glide (viewport-level hover, transform-only neighbour push, live centring)
+- [x] Achievements: static hover zones + CSS transitions replace GSAP fan (no hover feedback loop)
+- [x] Performance pass: right-sized WebP images (2.2 MB → ~0.3 MB), self-hosted fonts, layout-free scan-line, IO-gated scroll work, content-visibility on off-screen sections, lazy Lenis, baked eye asset, no blur filters on animated layers (Lighthouse: mobile 92–93, desktop 99, a11y/best-practices/SEO 100)
+- [x] Intro shortened via INTRO_SPEED in Preloader.tsx (1 = original ~4.1s)
+- [x] Blue/red highlight system (--hl-blue / --hl-red) across nav, cards, borders, progress, selection and focus states
+- [x] Japanese accents: vertical kanji watermarks per section, section tags, chapter numerals, hero vertical text, hanko seals, service/achievement/toolbox kanji
+- [x] Star background: static SVG tiles, transform/opacity animation only, CSS loaded after the intro (src/styles-stars.css); page bands are slightly translucent so stars show through at low focus
+- [x] Cinematic curtain-reveal footer (src/components/ui/motion-footer.tsx): client-mounted after intro/idle, animations run only while on screen, no backdrop-filter / blur filters / GSAP
+- [x] Verified with interleaved A/B Lighthouse runs: stars + footer add no measurable cost vs. the previous build (mobile 91–93, desktop 99, a11y/best-practices/SEO 100)
+- [x] Post-FCP script start (src/server.ts `deferModuleScripts`): the entry script and modulepreload hints are removed from the SSR HTML and re-added by a tiny inline loader once first-contentful-paint fires (3s fallback), so the JS bundle no longer competes with the render-blocking CSS — mobile FCP 2.4s → 1.7s
+- [x] Lenis base CSS inlined into styles.css (removes a render-blocking request); hero reveal transitions tightened
+- [x] Final Lighthouse on the production build (interleaved runs, simulated slow-4G / 4x CPU): mobile 98 (FCP 1.7s, LCP 1.7s, TBT 0, CLS 0, SI 3.3s), desktop 99 (FCP 0.4s, SI 1.2s), accessibility / best-practices / SEO 100. Journey: 58 → 92 → 98 on mobile
+- [ ] Remaining mobile gap is Speed Index, which is bound by the intro length: INTRO_SPEED 0.25 measured 98–99 (SI 2.8–3.0s) vs 98 (SI 3.3s) at the shipped 0.42, at the cost of a much shorter eye-blink preloader
+- [x] `npm run preview` now runs `wrangler dev` against the Cloudflare build in .output (the default `vite preview` cannot find dist/server/server.js with the Cloudflare preset); verified the post-FCP loader, hydration, intro, footer, stars and hover in the real Workers runtime
+- [x] Supabase backend: `posts`, `projects`, `contact_submissions`, `page_views` tables with Row Level Security (public reads published-only content + inserts contact messages / page views; everything else needs the service-role key), an `admin_dashboard(days)` aggregate function, and `blog-images` / `project-images` storage buckets — `supabase/migrations/20260927000000_init.sql`, verified with an in-process PGlite Postgres (idempotency, RLS per role, constraints, storage buckets)
+- [x] Admin authentication: env-configured ID + password (or `ADMIN_PASSWORD_HASH` via `npm run admin:hash`, PBKDF2), signed HttpOnly SameSite=Strict session cookie (12h), rate-limited login attempts, constant-time credential comparison — `src/server/admin-auth.server.ts`
+- [x] Rich-text pipeline: TipTap/ProseMirror editor storing JSON documents; `src/lib/rich-text.ts` sanitises (allow-listed nodes/marks, `javascript:`/`data:` URLs rejected) and renders to HTML on both save and read, so raw HTML is never stored or trusted
+- [x] Public blog (`/blog`, `/blog/:slug`): search, category/tag filters, pagination, related posts, Open Graph + JSON-LD + canonical URL, admin-only preview (`?preview=1`, noindex), drafts/scheduled posts return 404 for everyone else, dynamic `/sitemap.xml` and `/robots.txt`; falls back to the built-in placeholder posts when Supabase isn't configured
+- [x] Admin CMS (`/admin`): dashboard (stats + visits chart + top pages/posts), blog post editor (TipTap toolbar, image upload with client-side WebP resize, tags, scheduling, slug-conflict detection, unsaved-changes guard), projects manager (drag-free reorder, image upload, publish/featured toggles), contact inbox (search/filter, mark read/unread, delete, reply-by-email), analytics (devices/browsers/referrers/countries), settings (environment checklist + connection status + one-click starter-content import). Every admin server function re-verifies the session itself
+- [x] Contact form wired to Supabase: honeypot field, client + server validation, per-IP rate limiting; admin inbox reflects submissions live
+- [x] Privacy-friendly page-view analytics: no cookies, no stored IPs (salted daily-rotating visitor hash), bot filtering, admin-only routes excluded, sent via `navigator.sendBeacon` after idle
+- [x] Social links centralised in `src/lib/socials.ts` (13 profiles), rendered with inlined brand-icon paths (`src/lib/social-icon-paths.ts`, no icon package) across the hero, contact section, footer, nav menu and article author card
+- [x] Verified end-to-end against a mock Supabase/Storage server (puppeteer): auth/session security (20 checks), full blog CMS lifecycle incl. XSS/`javascript:` rejection (37 checks), projects CRUD + contact form incl. honeypot/rate-limit (25 checks), dashboard/analytics/settings with real seeded data (20 checks) — 100+ checks, all passing, zero console errors
+- [x] Confirmed no admin/editor/TipTap code reaches the public bundle (checked via network trace on the production build) and the public build still passes `npm run build` for the default Cloudflare preset; mobile Lighthouse 96 / desktop 97 (down from 98/99 — the home page now does a real (cached) data fetch and ships contact-form validation JS it didn't before; accessibility/best-practices/SEO remain 100)
+- [x] `docs/BACKEND.md` + `.env.example` document the Supabase setup, environment variables and admin-password-hash workflow
+- [x] Writings (`/writings`, `/writings/:slug`): a quieter counterpart to the blog for poems, thoughts, questions, stories, letters, essays and journal entries; free-text `type` (quick-pick chips, nothing hardcoded), type/section/series filters, search, pagination, `CreativeWork` JSON-LD, admin-only preview, drafts 404 for everyone else; poem mode preserves exact line breaks and stanza gaps purely in CSS (same sanitiser/renderer as the blog)
+- [x] Optional content hierarchy: Collection → Chapter, plus flat Sections (topic) and Series (ordered run), stored as real nullable foreign keys on `posts` and `writings` (nothing is forced; existing posts/URLs unchanged); a DB trigger keeps chapter ↔ collection consistent; deleting a collection cascades its chapters and only un-links content
+- [x] Public navigation for the hierarchy: `/writings/collections/:slug` (chapters + entries), `/writings/collections/:slug/:chapter` (entries, prev/next chapter), breadcrumbs, series part list, auto table of contents from headings (sticky on desktop, collapsible on mobile) and a reading-progress bar; collections + chapters + writings added to `/sitemap.xml`
+- [x] Admin: Writings CMS (`/admin/writings`, same workflow/editor as the blog), unified Content structure manager (`/admin/structure`: collections/chapters/sections/series with add/edit/delete and up/down ordering, no drag-and-drop library), dashboard counts for writings/collections
+- [x] Media library (`/admin/media`): upload images, PDFs, Office documents, text/CSV and ZIPs (25 MB) to a public `media` storage bucket; files are identified by their magic bytes rather than the browser-supplied type, catalogued in a private `media_assets` table (no public access), with copy-URL/open/delete
+- [x] `supabase/migrations/20260928000000_writings_and_hierarchy.sql`: additive and idempotent, with RLS on every new table; verified against a real Postgres (PGlite) incl. a database pre-seeded with existing posts
+- [x] Re-verified after the change: 155 browser end-to-end checks + 90 unit/SQL checks pass, `tsc` clean, lint clean on all touched files, no admin/editor chunks load on `/`, `/blog`, `/writings`, a writing or a collection page, default Cloudflare `npm run build` passes
+- [x] Major content pass: removed all built-in placeholder/starter content (the old `src/lib/posts.ts`, `src/lib/projects.ts` sample data and the admin "import starter content" shortcut). The public site now shows only real, admin-authored content — an empty section shows a plain "nothing here yet" state instead of sample text
+- [x] Personalize (`/admin/personalize`): About copy, contact details, and six previously-hardcoded home-page lists — Journey, What I can build (services), Achievements, Toolbox, Currently exploring, FAQ — are now database-backed and editable with add/edit/delete and up/down reordering, sharing one small field-registry + form/list component so every section gets the same editor for free; Projects joins the same tab bar (its own CMS page was already there)
+- [x] Achievements can carry a photo or a short video (`media_kind`), shown on the public card; the media library now accepts video (MP4/WebM/MOV, sniffed by magic bytes) alongside images/PDFs/documents/archives, and uploads go straight from the browser to Supabase Storage via a short-lived signed URL (not through the app server), raising the practical limit to 50 MB without hitting a serverless request-body cap
+- [x] Home page's dynamic sections (identity lines, journey, services, achievements, toolbox, exploring, FAQ) now render from Personalize's data instead of hardcoded arrays, with the 16 new service-card glyphs (bug bounty, VAPT, DFIR, pentesting, blue teaming, reverse engineering, endpoint security, research, etc.) added alongside the original six
+- [x] Writings section added to the public home page, right below Thoughts, and to the mobile/overlay navigation menu (styled like the rest of the menu); the desktop nav's Writings link was already in place
+- [x] Contact form now relays each message to the site's contact email via FormSubmit (`https://formsubmit.co/ajax/<email>`), in parallel with the existing Supabase inbox — either channel succeeding counts as delivered; the destination email is the one set in Personalize (default `perhaps.maverick@gmail.com`, replacing the placeholder `hello@aksh.dev` everywhere it appeared)
+- [x] 404 page redesigned to match the site (mono/display type, kanji watermark, links back home/blog/writings) instead of the generic default
+- [x] `supabase/migrations/20260929000000_site_content.sql`: adds `site_profile` + the six list tables, RLS (public reads published rows only), and seeds the About copy, identity lines, services and toolbox with today's real starting content — verified against a real Postgres (PGlite), including idempotency (re-running never overwrites edits) and the media-kind/pairing constraints
+- [x] `docs/DEPLOY_VERCEL.md`: deploying the same Nitro build to Vercel instead of Cloudflare (tested locally with `NITRO_PRESET=vercel`); `README.md` rewritten to describe the actual project
+- [x] Re-verified after the change: 187 browser end-to-end checks + 158 unit/SQL checks pass, `tsc` clean, lint clean on all touched files, no admin/editor/Personalize chunk loads on `/`, `/blog` or `/writings`, default Cloudflare `npm run build` passes, no credentials in the client bundle

@@ -1,0 +1,273 @@
+import * as React from "react";
+import { createFileRoute, Link, useNavigate, useRouterState } from "@tanstack/react-router";
+import { ArrowLeft, Search, X } from "lucide-react";
+
+import { BlogCard } from "@/components/blog/BlogCard";
+import { listPostsFn } from "@/lib/content.functions";
+import "@/styles-blog.css";
+
+const PAGE_SIZE = 9;
+
+type BlogSearch = {
+  q?: string | undefined;
+  category?: string | undefined;
+  tag?: string | undefined;
+  page?: number | undefined;
+};
+
+const text = (value: unknown, max: number) =>
+  typeof value === "string" && value.trim() ? value.trim().slice(0, max) : undefined;
+
+export const Route = createFileRoute("/blog/")({
+  validateSearch: (search: Record<string, unknown>): BlogSearch => {
+    const page = Number(search["page"]);
+    const out: BlogSearch = {};
+    const q = text(search["q"], 80);
+    const category = text(search["category"], 40);
+    const tag = text(search["tag"], 30);
+    if (q) out.q = q;
+    if (category) out.category = category;
+    if (tag) out.tag = tag;
+    if (Number.isInteger(page) && page > 1 && page <= 500) out.page = page;
+    return out;
+  },
+  loaderDeps: ({ search }) => ({
+    q: search.q,
+    category: search.category,
+    tag: search.tag,
+    page: search.page ?? 1,
+  }),
+  loader: ({ deps }) => listPostsFn({ data: { ...deps, pageSize: PAGE_SIZE } }),
+  staleTime: 30_000,
+  head: () => ({
+    meta: [
+      { title: "Thoughts — AKSH" },
+      {
+        name: "description",
+        content:
+          "Notes on creative development, security, and the craft of building for the web — writing by AKSH.",
+      },
+      { property: "og:title", content: "Thoughts — AKSH" },
+      {
+        property: "og:description",
+        content: "Notes on creative development, security, and the craft of building for the web.",
+      },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
+  pendingComponent: BlogSkeleton,
+  errorComponent: BlogError,
+  component: BlogIndex,
+});
+
+function BlogShell({ children }: { children: React.ReactNode }) {
+  return (
+    <main className="article-shell blog-shell">
+      <div className="atmosphere" aria-hidden="true" />
+      <div className="grain" aria-hidden="true" />
+      <div className="article-topbar">
+        <Link to="/" hash="blog" className="article-back mono">
+          <ArrowLeft size={14} strokeWidth={1.5} /> BACK HOME
+        </Link>
+        <span className="mono article-sys">AKSH.OS / BLOG</span>
+      </div>
+      {children}
+    </main>
+  );
+}
+
+function BlogHead() {
+  return (
+    <header className="blog-head">
+      <p className="article-kicker mono">
+        BLOG / THOUGHTS <b className="jp">随筆</b>
+      </p>
+      <h1 className="blog-title">THOUGHTS</h1>
+      <p className="blog-sub">
+        Notes on creative development, security, and the craft of building for the web.
+      </p>
+    </header>
+  );
+}
+
+function BlogSkeleton() {
+  return (
+    <BlogShell>
+      <BlogHead />
+      <ul className="blog-grid" aria-hidden="true">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <li key={i} className="blog-card-item">
+            <div className="blog-card blog-skeleton">
+              <div className="blog-card-media" />
+              <div className="blog-card-body">
+                <span className="sk sk-s" />
+                <span className="sk sk-l" />
+                <span className="sk sk-m" />
+              </div>
+            </div>
+          </li>
+        ))}
+      </ul>
+    </BlogShell>
+  );
+}
+
+function BlogError({ reset }: { reset: () => void }) {
+  return (
+    <BlogShell>
+      <BlogHead />
+      <div className="blog-state" role="alert">
+        <p className="blog-state-title">The articles didn't load.</p>
+        <p>Something went wrong on our end. Check your connection and try again.</p>
+        <button type="button" className="blog-btn mono" onClick={reset}>
+          TRY AGAIN
+        </button>
+      </div>
+    </BlogShell>
+  );
+}
+
+function BlogIndex() {
+  const { items, total, page, pageSize, categories } = Route.useLoaderData();
+  const search = Route.useSearch();
+  const navigate = useNavigate({ from: "/blog/" });
+  const loading = useRouterState({ select: (s) => s.isLoading });
+
+  // Debounced search: typing updates the URL (and therefore the list) 300 ms after the last keystroke.
+  const [query, setQuery] = React.useState(search.q ?? "");
+  React.useEffect(() => setQuery(search.q ?? ""), [search.q]);
+  React.useEffect(() => {
+    const clean = query.trim();
+    if (clean === (search.q ?? "")) return;
+    const id = window.setTimeout(() => {
+      void navigate({
+        search: (prev) => ({ ...prev, q: clean || undefined, page: undefined }),
+        replace: true,
+        resetScroll: false,
+      });
+    }, 300);
+    return () => window.clearTimeout(id);
+  }, [query, search.q, navigate]);
+
+  const pages = Math.max(1, Math.ceil(total / pageSize));
+  const filtered = Boolean(search.q || search.category || search.tag);
+
+  return (
+    <BlogShell>
+      <BlogHead />
+
+      <div className="blog-tools">
+        <form className="blog-search" role="search" onSubmit={(e) => e.preventDefault()}>
+          <Search size={16} strokeWidth={1.5} aria-hidden="true" />
+          <input
+            type="search"
+            name="q"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search articles"
+            aria-label="Search articles"
+            maxLength={80}
+            autoComplete="off"
+          />
+          {query ? (
+            <button type="button" aria-label="Clear search" onClick={() => setQuery("")}>
+              <X size={14} strokeWidth={1.6} />
+            </button>
+          ) : null}
+        </form>
+
+        {categories.length > 1 ? (
+          <div className="blog-chips" role="group" aria-label="Filter by category">
+            <Link
+              to="/blog"
+              search={(prev) => ({ ...prev, category: undefined, page: undefined })}
+              className={`blog-chip mono ${!search.category ? "is-on" : ""}`}
+              aria-current={!search.category ? "true" : undefined}
+            >
+              ALL
+            </Link>
+            {categories.map((category) => (
+              <Link
+                key={category}
+                to="/blog"
+                search={(prev) => ({ ...prev, category, page: undefined })}
+                className={`blog-chip mono ${search.category === category ? "is-on" : ""}`}
+                aria-current={search.category === category ? "true" : undefined}
+              >
+                {category}
+              </Link>
+            ))}
+          </div>
+        ) : null}
+        {search.tag ? (
+          <p className="blog-active-tag mono">
+            TAG: #{search.tag}{" "}
+            <Link
+              to="/blog"
+              search={(prev) => ({ ...prev, tag: undefined, page: undefined })}
+              aria-label="Clear tag filter"
+            >
+              <X size={12} strokeWidth={1.6} />
+            </Link>
+          </p>
+        ) : null}
+      </div>
+
+      <p className="blog-count mono" role="status" aria-live="polite">
+        {total} {total === 1 ? "ARTICLE" : "ARTICLES"}
+        {filtered ? " FOUND" : ""}
+      </p>
+
+      {items.length === 0 ? (
+        <div className="blog-state">
+          <p className="blog-state-title">
+            {filtered ? "Nothing matches that search." : "New writing is on the way."}
+          </p>
+          <p>
+            {filtered
+              ? "Try a different word or clear the filters."
+              : "Check back soon — the first articles are being written."}
+          </p>
+          {filtered ? (
+            <Link to="/blog" className="blog-btn mono">
+              CLEAR FILTERS
+            </Link>
+          ) : null}
+        </div>
+      ) : (
+        <ul className={`blog-grid ${loading ? "is-loading" : ""}`}>
+          {items.map((post, index) => (
+            <BlogCard key={post.id} post={post} priority={index < 2 && page === 1} />
+          ))}
+        </ul>
+      )}
+
+      {pages > 1 ? (
+        <nav className="blog-pager mono" aria-label="Pagination">
+          {page > 1 ? (
+            <Link
+              to="/blog"
+              search={(prev) => ({ ...prev, page: page - 1 > 1 ? page - 1 : undefined })}
+              rel="prev"
+            >
+              ← PREV
+            </Link>
+          ) : (
+            <span aria-hidden="true" />
+          )}
+          <span>
+            PAGE {page} / {pages}
+          </span>
+          {page < pages ? (
+            <Link to="/blog" search={(prev) => ({ ...prev, page: page + 1 })} rel="next">
+              NEXT →
+            </Link>
+          ) : (
+            <span aria-hidden="true" />
+          )}
+        </nav>
+      ) : null}
+    </BlogShell>
+  );
+}
