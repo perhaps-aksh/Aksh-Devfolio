@@ -2,7 +2,7 @@ import * as React from "react";
 import { Link, useBlocker, useRouter } from "@tanstack/react-router";
 import { ExternalLink, Loader2, Save, Send, Trash2, X } from "lucide-react";
 
-import type { AdminPostDetail, PostStatus } from "@/lib/admin-types";
+import type { AdminPostDetail, ContentStructure, PostStatus } from "@/lib/admin-types";
 import { deletePostFn, savePostFn } from "@/lib/admin.functions";
 import { normalizeTags, slugify } from "@/lib/blog-utils";
 import { uploadImage } from "@/lib/image-upload";
@@ -17,9 +17,11 @@ import { Banner, PageHeader } from "./ui";
 // TipTap and everything it needs is fetched only when an editor is actually opened.
 const RichTextEditor = React.lazy(() => import("./RichTextEditor"));
 
-type Props = { post: AdminPostDetail | null };
+type Props = { post: AdminPostDetail | null; structure: ContentStructure };
 
-export function PostEditor({ post }: Props) {
+const NONE = "";
+
+export function PostEditor({ post, structure }: Props) {
   const router = useRouter();
   const toast = useToast();
 
@@ -37,6 +39,14 @@ export function PostEditor({ post }: Props) {
   const [publishAt, setPublishAt] = React.useState(toLocalInput(post?.published_at));
   const [content, setContent] = React.useState<PMNode>(
     (post?.content as PMNode | undefined) ?? EMPTY_DOC,
+  );
+
+  const [collectionId, setCollectionId] = React.useState(post?.collection_id ?? NONE);
+  const [chapterId, setChapterId] = React.useState(post?.chapter_id ?? NONE);
+  const [sectionId, setSectionId] = React.useState(post?.section_id ?? NONE);
+  const [seriesId, setSeriesId] = React.useState(post?.series_id ?? NONE);
+  const [seriesOrder, setSeriesOrder] = React.useState(
+    post?.series_order ? String(post.series_order) : "",
   );
 
   const [dirty, setDirty] = React.useState(false);
@@ -64,6 +74,7 @@ export function PostEditor({ post }: Props) {
     withResolver: true,
   });
 
+  const chaptersInCollection = structure.chapters.filter((c) => c.collection_id === collectionId);
   const scheduled =
     status === "published" &&
     publishAt !== "" &&
@@ -91,6 +102,11 @@ export function PostEditor({ post }: Props) {
             category,
             tags,
             status: target,
+            collection_id: collectionId || null,
+            chapter_id: chapterId || null,
+            section_id: sectionId || null,
+            series_id: seriesId || null,
+            series_order: seriesId && seriesOrder ? Number(seriesOrder) : null,
             published_at: fromLocalInput(publishAt),
           },
         });
@@ -135,6 +151,11 @@ export function PostEditor({ post }: Props) {
       coverAlt,
       category,
       tags,
+      collectionId,
+      chapterId,
+      sectionId,
+      seriesId,
+      seriesOrder,
       publishAt,
       status,
       router,
@@ -403,6 +424,108 @@ export function PostEditor({ post }: Props) {
                     ))}
                   </div>
                 ) : null}
+              </div>
+            </div>
+          </section>
+
+          <section className="adm-panel">
+            <div className="adm-panel-head">
+              <h2 className="adm-panel-title">Organize</h2>
+            </div>
+            <div className="adm-panel-body">
+              <div className="adm-field">
+                <label className="adm-label" htmlFor="post-collection">
+                  Collection
+                </label>
+                <select
+                  id="post-collection"
+                  className="adm-select"
+                  value={collectionId}
+                  onChange={(e) => {
+                    touch(setCollectionId)(e.target.value);
+                    setChapterId(NONE);
+                  }}
+                >
+                  <option value={NONE}>None</option>
+                  {structure.collections.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.title}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="adm-field">
+                <label className="adm-label" htmlFor="post-chapter">
+                  Chapter
+                </label>
+                <select
+                  id="post-chapter"
+                  className="adm-select"
+                  value={chapterId}
+                  disabled={!collectionId}
+                  onChange={(e) => touch(setChapterId)(e.target.value)}
+                >
+                  <option value={NONE}>None</option>
+                  {chaptersInCollection.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.title}
+                    </option>
+                  ))}
+                </select>
+                {!collectionId ? <p className="adm-hint">Choose a collection first.</p> : null}
+              </div>
+              <div className="adm-field">
+                <label className="adm-label" htmlFor="post-section">
+                  Section
+                </label>
+                <select
+                  id="post-section"
+                  className="adm-select"
+                  value={sectionId}
+                  onChange={(e) => touch(setSectionId)(e.target.value)}
+                >
+                  <option value={NONE}>None</option>
+                  {structure.sections.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.title}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="adm-row" style={{ marginBottom: 0 }}>
+                <div className="adm-field">
+                  <label className="adm-label" htmlFor="post-series">
+                    Series
+                  </label>
+                  <select
+                    id="post-series"
+                    className="adm-select"
+                    value={seriesId}
+                    onChange={(e) => touch(setSeriesId)(e.target.value)}
+                  >
+                    <option value={NONE}>None</option>
+                    {structure.series.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.title}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="adm-field">
+                  <label className="adm-label" htmlFor="post-series-order">
+                    Part #
+                  </label>
+                  <input
+                    id="post-series-order"
+                    className="adm-input"
+                    type="number"
+                    min={1}
+                    max={100000}
+                    disabled={!seriesId}
+                    value={seriesOrder}
+                    onChange={(e) => touch(setSeriesOrder)(e.target.value)}
+                  />
+                </div>
               </div>
             </div>
           </section>

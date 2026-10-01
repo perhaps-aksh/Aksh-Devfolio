@@ -17,6 +17,13 @@ import { isAdminRequest } from "./admin-auth.server";
 import { cached } from "./cache.server";
 import { config } from "./env.server";
 import { loadSiteContent } from "./site-content.server";
+import {
+  chapterRefOf,
+  collectionRefOf,
+  getStructureMaps,
+  refOf,
+  type StructureMaps,
+} from "./structure.server";
 import { adminDb, publicDb, type Db } from "./supabase.server";
 
 /**
@@ -28,7 +35,7 @@ import { adminDb, publicDb, type Db } from "./supabase.server";
  */
 const TTL = 60_000;
 const SUMMARY_COLUMNS =
-  "id,slug,title,excerpt,cover_image,cover_alt,category,tags,author_name,published_at,reading_time";
+  "id,slug,title,excerpt,cover_image,cover_alt,category,tags,author_name,published_at,reading_time,collection_id,chapter_id,section_id,series_id,series_order";
 const HOME_WRITING_COLUMNS = "id,slug,title,subtitle,excerpt,type,published_at";
 
 type Result<T> = { data: T | null; error: { message: string } | null; count?: number | null };
@@ -83,6 +90,36 @@ function livePosts(db: Db, columns: string, count?: "exact") {
     .lte("published_at", nowIso());
 }
 
+type PostRow = {
+  id: string;
+  slug: string;
+  title: string;
+  excerpt: string;
+  cover_image: string | null;
+  cover_alt: string;
+  category: string;
+  tags: string[];
+  author_name: string;
+  published_at: string | null;
+  reading_time: number;
+  collection_id: string | null;
+  chapter_id: string | null;
+  section_id: string | null;
+  series_id: string | null;
+  series_order: number | null;
+};
+
+function toSummary(row: PostRow, maps: StructureMaps): PostSummary {
+  const { collection_id, chapter_id, section_id, series_id, ...rest } = row;
+  return {
+    ...rest,
+    collection: collectionRefOf(maps.collections, collection_id),
+    chapter: chapterRefOf(maps.chapters, chapter_id),
+    section: refOf(maps.sections, section_id),
+    series: refOf(maps.series, series_id),
+  };
+}
+
 // --- queries -------------------------------------------------------------------------------------
 
 const emptyHome = (): HomeContent => ({
@@ -115,7 +152,7 @@ export async function getHomeContent(): Promise<HomeContent> {
   if (!db) return emptyHome();
   try {
     return await cached("home", TTL, async () => {
-      const [projects, posts, writings, site] = await Promise.all([
+      const [projects, posts, writings, site, maps] = await Promise.all([
         db
           .from("projects")
           .select(
@@ -127,10 +164,11 @@ export async function getHomeContent(): Promise<HomeContent> {
         livePosts(db, SUMMARY_COLUMNS).order("published_at", { ascending: false }).limit(6),
         loadHomeWritings(db),
         loadSiteContent(db),
+        getStructureMaps(),
       ]);
       return {
         projects: unwrap<ProjectRow[]>(projects as Result<ProjectRow[]>).map(toProject),
-        posts: unwrap<PostSummary[]>(posts as Result<PostSummary[]>),
+        posts: unwrap<PostRow[]>(posts as Result<PostRow[]>).map((r) => toSummary(r, maps)),
         writings,
         site,
       };
@@ -145,44 +183,72 @@ export type ListInput = {
   q?: string | undefined;
   category?: string | undefined;
   tag?: string | undefined;
+  collection?: string | undefined;
+  section?: string | undefined;
+  series?: string | undefined;
   page: number;
   pageSize: number;
 };
 
 export async function listPosts(input: ListInput): Promise<PostList> {
   const q = safeSearchTerm(input.q ?? "");
-  const { category, tag } = input;
+  const { category, tag, collection, section, series } = input;
   const page = Math.max(1, input.page);
   const pageSize = Math.min(24, Math.max(1, input.pageSize));
   const db = publicDb();
 
-  const empty = (): PostList => ({ items: [], total: 0, page, pageSize, categories: [] });
+  const empty = (): PostList => ({
+    items: [],
+    total: 0,
+    page,
+    pageSize,
+    categories: [],
+    collections: [],
+    sections: [],
+    series: [],
+  });
   if (!db) return empty();
 
   try {
     return await cached(
-      `list:${q}|${category ?? ""}|${tag ?? ""}|${page}|${pageSize}`,
+      `list:${q}|${category ?? ""}|${tag ?? ""}|${collection ?? ""}|${section ?? ""}|${series ?? ""}|${page}|${pageSize}`,
       TTL,
       async () => {
+        const maps = await getStructureMaps();
+        const collectionId = collection
+          ? [...maps.collections.values()].find((c) => c.slug === collection)?.id
+          : undefined;
+        const sectionId = section
+          ? [...maps.sections.values()].find((s) => s.slug === section)?.id
+          : undefined;
+        const seriesId = series
+          ? [...maps.series.values()].find((s) => s.slug === series)?.id
+          : undefined;
+
         let query = livePosts(db, SUMMARY_COLUMNS, "exact");
         if (category) query = query.eq("category", category);
         if (tag) query = query.contains("tags", [tag]);
+        if (collectionId) query = query.eq("collection_id", collectionId);
+        if (sectionId) query = query.eq("section_id", sectionId);
+        if (seriesId) query = query.eq("series_id", seriesId);
         if (q) query = query.or(`title.ilike.*${q}*,excerpt.ilike.*${q}*`);
         const from = (page - 1) * pageSize;
-        const [list, categories] = await Promise.all([
+        const [list, categories, filters] = await Promise.all([
           query
             .order("published_at", { ascending: false })
             .order("id")
             .range(from, from + pageSize - 1),
           listCategories(db),
+          listStructureFilters(db, maps),
         ]);
-        const rows = unwrap<PostSummary[]>(list as Result<PostSummary[]>);
+        const rows = unwrap<PostRow[]>(list as Result<PostRow[]>);
         return {
-          items: rows,
+          items: rows.map((r) => toSummary(r, maps)),
           total: (list as Result<unknown>).count ?? rows.length,
           page,
           pageSize,
           categories,
+          ...filters,
         };
       },
     );
@@ -201,15 +267,54 @@ async function listCategories(db: Db): Promise<string[]> {
   });
 }
 
-type PostRow = PostSummary & {
-  content: unknown;
-  status: "draft" | "published";
-  updated_at: string;
-};
+type FilterRef = { id: string; slug: string; title: string };
 
-function toFull(row: PostRow): PostFull {
-  const { content, ...rest } = row;
-  return { ...rest, html: renderDoc(content) };
+/** Collections/sections/series actually used by at least one published post, for the public browse panel. */
+async function listStructureFilters(
+  db: Db,
+  maps: StructureMaps,
+): Promise<{
+  collections: PostList["collections"];
+  sections: PostList["sections"];
+  series: PostList["series"];
+}> {
+  return cached("post-structure-filters", 5 * 60_000, async () => {
+    const rows = unwrap<
+      { collection_id: string | null; section_id: string | null; series_id: string | null }[]
+    >(
+      (await livePosts(db, "collection_id,section_id,series_id").limit(1000)) as Result<
+        { collection_id: string | null; section_id: string | null; series_id: string | null }[]
+      >,
+    );
+    const byId = (ids: (string | null)[], map: Map<string, FilterRef>): FilterRef[] =>
+      [...new Set(ids.filter((id): id is string => Boolean(id)))]
+        .map((id) => map.get(id))
+        .filter((v): v is FilterRef => Boolean(v))
+        .map((v) => ({ id: v.id, slug: v.slug, title: v.title }))
+        .sort((a, b) => a.title.localeCompare(b.title));
+    return {
+      collections: byId(
+        rows.map((r) => r.collection_id),
+        maps.collections,
+      ),
+      sections: byId(
+        rows.map((r) => r.section_id),
+        maps.sections,
+      ),
+      series: byId(
+        rows.map((r) => r.series_id),
+        maps.series,
+      ),
+    };
+  });
+}
+
+function toFull(
+  row: PostRow & { content: unknown; status: "draft" | "published"; updated_at: string },
+  maps: StructureMaps,
+): PostFull {
+  const { content, status, updated_at, ...rest } = row;
+  return { ...toSummary(rest, maps), html: renderDoc(content), status, updated_at };
 }
 
 function rankRelated(current: PostSummary, candidates: PostSummary[]): PostSummary[] {
@@ -231,13 +336,12 @@ export async function getPostPage(slug: string, preview: boolean): Promise<PostP
   if (preview && (await isAdminRequest())) {
     try {
       const db = adminDb();
-      const row = (await db
-        .from("posts")
-        .select("*")
-        .eq("slug", slug)
-        .maybeSingle()) as Result<PostRow>;
+      const row = (await db.from("posts").select("*").eq("slug", slug).maybeSingle()) as Result<
+        PostRow & { content: unknown; status: "draft" | "published"; updated_at: string }
+      >;
       if (row.error || !row.data) return null;
-      return { post: toFull(row.data), related: [], siteUrl, preview: true };
+      const maps = await getStructureMaps();
+      return { post: toFull(row.data, maps), related: [], siteUrl, preview: true };
     } catch (error) {
       console.error("[content] preview failed:", error);
       return null;
@@ -249,16 +353,26 @@ export async function getPostPage(slug: string, preview: boolean): Promise<PostP
 
   try {
     const page = await cached(`post:${slug}`, TTL, async () => {
-      const row = (await livePosts(db, "*").eq("slug", slug).maybeSingle()) as Result<PostRow>;
+      const row = (await livePosts(db, "*").eq("slug", slug).maybeSingle()) as Result<
+        PostRow & { content: unknown; status: "draft" | "published"; updated_at: string }
+      >;
       if (row.error) throw new Error(row.error.message);
       if (!row.data) return null;
-      const pool = unwrap<PostSummary[]>(
+      const maps = await getStructureMaps();
+      const full = toFull(row.data, maps);
+      const pool = unwrap<PostRow[]>(
         (await livePosts(db, SUMMARY_COLUMNS)
           .neq("id", row.data.id)
           .order("published_at", { ascending: false })
-          .limit(12)) as Result<PostSummary[]>,
+          .limit(12)) as Result<PostRow[]>,
       );
-      return { post: toFull(row.data), related: rankRelated(row.data, pool) };
+      return {
+        post: full,
+        related: rankRelated(
+          full,
+          pool.map((r) => toSummary(r, maps)),
+        ),
+      };
     });
     return page ? { ...page, siteUrl, preview: false } : null;
   } catch (error) {

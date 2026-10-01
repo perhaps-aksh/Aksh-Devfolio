@@ -1,9 +1,24 @@
 import type { PMNode } from "@/lib/rich-text";
-import type { PostSummary } from "@/lib/content-types";
 
 export type PostStatus = "draft" | "published";
 
-export type AdminPostRow = PostSummary & {
+export type AdminPostRow = {
+  id: string;
+  slug: string;
+  title: string;
+  excerpt: string;
+  cover_image: string | null;
+  cover_alt: string;
+  category: string;
+  tags: string[];
+  author_name: string;
+  published_at: string | null;
+  reading_time: number;
+  collection_id: string | null;
+  chapter_id: string | null;
+  section_id: string | null;
+  series_id: string | null;
+  series_order: number | null;
   status: PostStatus;
   created_at: string;
   updated_at: string;

@@ -53,7 +53,7 @@ function unwrap<T>(result: Result<T>): T {
 }
 
 const POST_LIST_COLUMNS =
-  "id,slug,title,excerpt,cover_image,cover_alt,category,tags,author_name,published_at,reading_time,status,created_at,updated_at";
+  "id,slug,title,excerpt,cover_image,cover_alt,category,tags,author_name,published_at,reading_time,status,created_at,updated_at,collection_id,chapter_id,section_id,series_id,series_order";
 const PROJECT_COLUMNS = "*";
 const BUCKETS = ["blog-images", "project-images"] as const;
 export type Bucket = (typeof BUCKETS)[number];
@@ -63,6 +63,7 @@ const PAGE_SIZE = 15;
 function conflict(error: { message: string; code?: string }, what: string): never {
   if (error.code === "23505")
     throw new HttpError(409, `That ${what} is already in use. Choose another.`);
+  if (error.code === "P0001") throw new HttpError(400, error.message);
   throw new Error(error.message);
 }
 
@@ -180,6 +181,11 @@ export type SavePostInput = {
   category: string;
   tags: string[];
   status: PostStatus;
+  collection_id: string | null;
+  chapter_id: string | null;
+  section_id: string | null;
+  series_id: string | null;
+  series_order: number | null;
   /** ISO date. Empty + status "published" means "publish now". A future date schedules the post. */
   published_at: string | null;
 };
@@ -221,6 +227,11 @@ export async function savePost(input: SavePostInput): Promise<AdminPostRow> {
     tags: normalizeTags(input.tags),
     status: input.status,
     reading_time: Math.min(240, readingTime(doc)),
+    collection_id: input.collection_id,
+    chapter_id: input.chapter_id,
+    section_id: input.section_id,
+    series_id: input.series_id,
+    series_order: input.series_id ? input.series_order : null,
     published_at: publishedAt,
   };
 

@@ -1,4 +1,5 @@
 import type { SiteContent } from "@/lib/site-content";
+import type { StructureRef } from "@/lib/writings-types";
 
 /** A project as the public site shows it. `image` is null until one is uploaded in the admin area. */
 export type Project = {
@@ -26,6 +27,11 @@ export type PostSummary = {
   author_name: string;
   published_at: string | null;
   reading_time: number;
+  collection: StructureRef | null;
+  chapter: StructureRef | null;
+  section: StructureRef | null;
+  series: StructureRef | null;
+  series_order: number | null;
 };
 
 export type PostFull = PostSummary & {
@@ -48,6 +54,9 @@ export type PostList = {
   page: number;
   pageSize: number;
   categories: string[];
+  collections: StructureRef[];
+  sections: StructureRef[];
+  series: StructureRef[];
 };
 
 /** The few fields the home page's Writings section needs. */

@@ -28,7 +28,9 @@ paste-and-run):
    adds (without touching existing posts or projects):
    - `writings`, plus the optional organisation tables `collections`, `chapters`, `sections`, `series`
      and nullable `collection_id` / `chapter_id` / `section_id` / `series_id` / `series_order` columns on
-     `posts`
+     `posts`. Both blog posts and writings share this one taxonomy — the admin editor for each has an
+     "Organize" panel to assign it, and both the blog and writings index pages let visitors browse by
+     collection/section/series through a filter panel.
    - `media_assets` (a private catalogue of uploaded files) and a public-read `media` storage bucket
      (25 MB per file; images, PDFs, Office documents, text/CSV and ZIPs)
    - RLS for all of the above (public reads published writings and the organisation tables only) and an
@@ -84,7 +86,10 @@ source code. It only runs when the corresponding table is empty.
 - `src/server/admin-auth.server.ts` — login, session cookie (signed, HttpOnly, SameSite=Strict, 12h),
   logout, rate-limited login attempts.
 - `src/server/content.server.ts` — public reads (published posts/projects), with a short in-memory cache
-  and a fallback to the built-in placeholder content if Supabase isn't reachable.
+  and a fallback to the built-in placeholder content if Supabase isn't reachable. Resolves each post's
+  `collection_id`/`chapter_id`/`section_id`/`series_id` into `{id, slug, title}` refs via
+  `src/server/structure.server.ts` (the same helper `writings.server.ts` uses), and `listPosts()` accepts
+  `collection`/`section`/`series` slug filters for the blog's browse panel.
 - `src/server/admin-data.server.ts` — all admin CRUD (posts, projects, contact submissions, image
   uploads, dashboard stats). Every function calls `requireAdmin()` itself.
 - `src/lib/content.functions.ts` / `src/lib/admin.functions.ts` — the typed server-function boundary the

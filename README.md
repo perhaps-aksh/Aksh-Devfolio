@@ -17,9 +17,12 @@ Built with [TanStack Start](https://tanstack.com/start), React 19, Vite and Tail
 - **Blog** (`/blog`) — long-form articles with categories, tags, search and related posts.
 - **Writings** (`/writings`) — a quieter counterpart to the blog for poems, thoughts,
   questions, stories, letters and journal entries. Poems preserve their exact line breaks
-  and stanza spacing. Writings can optionally belong to a **collection → chapter**
-  (`/writings/collections/:slug[/:chapter]`), a flat **section**, or an ordered **series** —
-  any combination, or none; nothing is forced into a rigid structure.
+  and stanza spacing.
+- Blog posts and writings share one optional content taxonomy: a **collection → chapter**
+  (writings also get dedicated pages at `/writings/collections/:slug[/:chapter]`), a flat
+  **section**, or an ordered **series** — any combination, or none; nothing is forced into a
+  rigid structure. A BROWSE panel on `/blog` lists whichever collections/sections/series are
+  actually in use and filters the list to them.
 - A contact form that both stores the message (visible in the admin inbox) and relays it by
   email via [FormSubmit](https://formsubmit.co), so messages reach an inbox with no backend
   email service to run.

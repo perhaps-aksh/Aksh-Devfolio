@@ -1,13 +1,16 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 
 import { PostEditor } from "@/components/admin/PostEditor";
-import { getAdminPostFn } from "@/lib/admin.functions";
+import { getAdminPostFn, getContentStructureFn } from "@/lib/admin.functions";
 
 export const Route = createFileRoute("/_admin/admin/blogs/$id/edit")({
   loader: async ({ params }) => {
-    const post = await getAdminPostFn({ data: { id: params.id } });
+    const [post, structure] = await Promise.all([
+      getAdminPostFn({ data: { id: params.id } }),
+      getContentStructureFn(),
+    ]);
     if (!post) throw notFound();
-    return post;
+    return { post, structure };
   },
   head: () => ({ meta: [{ title: "Edit post — AKSH Admin" }] }),
   notFoundComponent: () => (
@@ -25,7 +28,7 @@ export const Route = createFileRoute("/_admin/admin/blogs/$id/edit")({
 });
 
 function EditPost() {
-  const post = Route.useLoaderData();
+  const { post, structure } = Route.useLoaderData();
   // Re-mount the editor when a different post is opened.
-  return <PostEditor key={post.id} post={post} />;
+  return <PostEditor key={post.id} post={post} structure={structure} />;
 }

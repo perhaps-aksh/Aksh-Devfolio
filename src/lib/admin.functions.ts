@@ -117,6 +117,11 @@ const savePostSchema = z.object({
   category: z.string().max(80),
   tags: z.array(z.string().max(60)).max(40),
   status: z.enum(["draft", "published"]),
+  collection_id: z.string().uuid().nullable(),
+  chapter_id: z.string().uuid().nullable(),
+  section_id: z.string().uuid().nullable(),
+  series_id: z.string().uuid().nullable(),
+  series_order: z.number().int().min(1).max(100000).nullable(),
   published_at: z.string().max(40).nullable(),
 });
 

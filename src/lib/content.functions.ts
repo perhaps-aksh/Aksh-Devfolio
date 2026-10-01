@@ -25,6 +25,9 @@ const listSchema = z.object({
   q: z.string().max(80).optional(),
   category: z.string().max(40).optional(),
   tag: z.string().max(30).optional(),
+  collection: z.string().max(100).optional(),
+  section: z.string().max(100).optional(),
+  series: z.string().max(100).optional(),
   page: z.number().int().min(1).max(500).default(1),
   pageSize: z.number().int().min(1).max(24).default(9),
 });

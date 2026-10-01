@@ -1,6 +1,6 @@
 import * as React from "react";
 import { createFileRoute, Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { ArrowLeft, Search, X } from "lucide-react";
+import { ArrowLeft, Compass, Search, X } from "lucide-react";
 
 import { BlogCard } from "@/components/blog/BlogCard";
 import { listPostsFn } from "@/lib/content.functions";
@@ -12,6 +12,9 @@ type BlogSearch = {
   q?: string | undefined;
   category?: string | undefined;
   tag?: string | undefined;
+  collection?: string | undefined;
+  section?: string | undefined;
+  series?: string | undefined;
   page?: number | undefined;
 };
 
@@ -25,9 +28,15 @@ export const Route = createFileRoute("/blog/")({
     const q = text(search["q"], 80);
     const category = text(search["category"], 40);
     const tag = text(search["tag"], 30);
+    const collection = text(search["collection"], 100);
+    const section = text(search["section"], 100);
+    const series = text(search["series"], 100);
     if (q) out.q = q;
     if (category) out.category = category;
     if (tag) out.tag = tag;
+    if (collection) out.collection = collection;
+    if (section) out.section = section;
+    if (series) out.series = series;
     if (Number.isInteger(page) && page > 1 && page <= 500) out.page = page;
     return out;
   },
@@ -35,6 +44,9 @@ export const Route = createFileRoute("/blog/")({
     q: search.q,
     category: search.category,
     tag: search.tag,
+    collection: search.collection,
+    section: search.section,
+    series: search.series,
     page: search.page ?? 1,
   }),
   loader: ({ deps }) => listPostsFn({ data: { ...deps, pageSize: PAGE_SIZE } }),
@@ -129,10 +141,13 @@ function BlogError({ reset }: { reset: () => void }) {
 }
 
 function BlogIndex() {
-  const { items, total, page, pageSize, categories } = Route.useLoaderData();
+  const { items, total, page, pageSize, categories, collections, sections, series } =
+    Route.useLoaderData();
   const search = Route.useSearch();
   const navigate = useNavigate({ from: "/blog/" });
   const loading = useRouterState({ select: (s) => s.isLoading });
+  const [browseOpen, setBrowseOpen] = React.useState(false);
+  const hasStructure = collections.length > 0 || sections.length > 0 || series.length > 0;
 
   // Debounced search: typing updates the URL (and therefore the list) 300 ms after the last keystroke.
   const [query, setQuery] = React.useState(search.q ?? "");
@@ -151,7 +166,14 @@ function BlogIndex() {
   }, [query, search.q, navigate]);
 
   const pages = Math.max(1, Math.ceil(total / pageSize));
-  const filtered = Boolean(search.q || search.category || search.tag);
+  const filtered = Boolean(
+    search.q ||
+    search.category ||
+    search.tag ||
+    search.collection ||
+    search.section ||
+    search.series,
+  );
 
   return (
     <BlogShell>
@@ -200,6 +222,18 @@ function BlogIndex() {
             ))}
           </div>
         ) : null}
+        {hasStructure ? (
+          <button
+            type="button"
+            className={`blog-browse-btn mono ${browseOpen ? "is-on" : ""}`}
+            aria-expanded={browseOpen}
+            aria-controls="blog-browse-panel"
+            onClick={() => setBrowseOpen((v) => !v)}
+          >
+            <Compass size={14} strokeWidth={1.6} /> BROWSE
+          </button>
+        ) : null}
+
         {search.tag ? (
           <p className="blog-active-tag mono">
             TAG: #{search.tag}{" "}
@@ -212,7 +246,103 @@ function BlogIndex() {
             </Link>
           </p>
         ) : null}
+        {search.collection ? (
+          <p className="blog-active-tag mono">
+            COLLECTION:{" "}
+            {collections.find((c) => c.slug === search.collection)?.title ?? search.collection}{" "}
+            <Link
+              to="/blog"
+              search={(prev) => ({ ...prev, collection: undefined, page: undefined })}
+              aria-label="Clear collection filter"
+            >
+              <X size={12} strokeWidth={1.6} />
+            </Link>
+          </p>
+        ) : null}
+        {search.section ? (
+          <p className="blog-active-tag mono">
+            SECTION: {sections.find((s) => s.slug === search.section)?.title ?? search.section}{" "}
+            <Link
+              to="/blog"
+              search={(prev) => ({ ...prev, section: undefined, page: undefined })}
+              aria-label="Clear section filter"
+            >
+              <X size={12} strokeWidth={1.6} />
+            </Link>
+          </p>
+        ) : null}
+        {search.series ? (
+          <p className="blog-active-tag mono">
+            SERIES: {series.find((s) => s.slug === search.series)?.title ?? search.series}{" "}
+            <Link
+              to="/blog"
+              search={(prev) => ({ ...prev, series: undefined, page: undefined })}
+              aria-label="Clear series filter"
+            >
+              <X size={12} strokeWidth={1.6} />
+            </Link>
+          </p>
+        ) : null}
       </div>
+
+      {browseOpen && hasStructure ? (
+        <div id="blog-browse-panel" className="blog-browse-panel">
+          {collections.length ? (
+            <div className="blog-browse-group">
+              <span className="blog-browse-label mono">COLLECTIONS</span>
+              <div className="blog-chips">
+                {collections.map((c) => (
+                  <Link
+                    key={c.id}
+                    to="/blog"
+                    search={(prev) => ({ ...prev, collection: c.slug, page: undefined })}
+                    className={`blog-chip mono ${search.collection === c.slug ? "is-on" : ""}`}
+                    aria-current={search.collection === c.slug ? "true" : undefined}
+                  >
+                    {c.title}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          ) : null}
+          {sections.length ? (
+            <div className="blog-browse-group">
+              <span className="blog-browse-label mono">SECTIONS</span>
+              <div className="blog-chips">
+                {sections.map((s) => (
+                  <Link
+                    key={s.id}
+                    to="/blog"
+                    search={(prev) => ({ ...prev, section: s.slug, page: undefined })}
+                    className={`blog-chip mono ${search.section === s.slug ? "is-on" : ""}`}
+                    aria-current={search.section === s.slug ? "true" : undefined}
+                  >
+                    {s.title}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          ) : null}
+          {series.length ? (
+            <div className="blog-browse-group">
+              <span className="blog-browse-label mono">SERIES</span>
+              <div className="blog-chips">
+                {series.map((s) => (
+                  <Link
+                    key={s.id}
+                    to="/blog"
+                    search={(prev) => ({ ...prev, series: s.slug, page: undefined })}
+                    className={`blog-chip mono ${search.series === s.slug ? "is-on" : ""}`}
+                    aria-current={search.series === s.slug ? "true" : undefined}
+                  >
+                    {s.title}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
 
       <p className="blog-count mono" role="status" aria-live="polite">
         {total} {total === 1 ? "ARTICLE" : "ARTICLES"}

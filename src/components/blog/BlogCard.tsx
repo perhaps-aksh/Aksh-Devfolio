@@ -35,6 +35,7 @@ export function BlogCard({ post, priority = false }: { post: PostSummary; priori
               <b className="jp">{categoryKanji(post.category)}</b>
               <span>{formatDateLong(post.published_at)}</span>
               <span>{post.reading_time} MIN</span>
+              {post.series ? <span>PART {post.series_order ?? "—"}</span> : null}
             </div>
             <h2 className="blog-card-title">{post.title}</h2>
             {post.excerpt ? <p className="blog-card-excerpt">{post.excerpt}</p> : null}

@@ -176,6 +176,33 @@ function ArticlePage() {
         <h1 className="article-title">{post.title}</h1>
         {post.excerpt ? <p className="article-lead">{post.excerpt}</p> : null}
 
+        {post.collection || post.section || post.series ? (
+          <ul className="article-tags mono" aria-label="Organized under">
+            {post.collection ? (
+              <li>
+                <Link to="/blog" search={{ collection: post.collection.slug }}>
+                  {post.collection.title}
+                </Link>
+              </li>
+            ) : null}
+            {post.section ? (
+              <li>
+                <Link to="/blog" search={{ section: post.section.slug }}>
+                  {post.section.title}
+                </Link>
+              </li>
+            ) : null}
+            {post.series ? (
+              <li>
+                <Link to="/blog" search={{ series: post.series.slug }}>
+                  {post.series.title}
+                  {post.series_order ? ` · PART ${post.series_order}` : ""}
+                </Link>
+              </li>
+            ) : null}
+          </ul>
+        ) : null}
+
         {post.tags.length ? (
           <ul className="article-tags mono" aria-label="Tags">
             {post.tags.map((tag) => (
