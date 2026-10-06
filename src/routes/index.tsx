@@ -22,7 +22,7 @@ import { Preloader } from "@/components/Preloader";
 import { useInView } from "@/hooks/use-in-view";
 import { useHydrated } from "@/hooks/use-hydrated";
 import { SocialIcon } from "@/components/SocialIcon";
-import { externalLinkProps, heroSocials, socials } from "@/lib/socials";
+import { heroSocials, profileLinkProps, socials } from "@/lib/socials";
 import type { ExploringItem, FaqItem, IdentityItem, SiteProfile } from "@/lib/site-content";
 
 export const Route = createFileRoute("/")({
@@ -377,7 +377,7 @@ function Topbar({ activeSection }: { activeSection: string }) {
             </span>
             <span className="nav-overlay-socials">
               {socials.map(({ id, label, href }) => (
-                <a key={id} href={href} {...externalLinkProps} aria-label={label} title={label}>
+                <a key={id} href={href} {...profileLinkProps} aria-label={label} title={label}>
                   <SocialIcon name={id} size={15} />
                 </a>
               ))}
@@ -616,7 +616,7 @@ function Hero({ start = true }: { start?: boolean }) {
         </div>
         <div>
           {heroSocials.map(({ id, label, href }) => (
-            <a href={href} {...externalLinkProps} key={id} aria-label={label} title={label}>
+            <a href={href} {...profileLinkProps} key={id} aria-label={label} title={label}>
               <SocialIcon name={id} size={15} />
             </a>
           ))}
@@ -834,7 +834,7 @@ function Contact({ profile }: { profile: SiteProfile }) {
           <Reveal delay={3}>
             <div className="contact-links">
               {socials.map(({ id, label, href }) => (
-                <a key={id} href={href} {...externalLinkProps} aria-label={`${label} profile`}>
+                <a key={id} href={href} {...profileLinkProps} aria-label={`${label} profile`}>
                   <SocialIcon name={id} size={15} />
                   <span>{label}</span>
                 </a>

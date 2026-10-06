@@ -6,7 +6,7 @@ import { SocialIcon } from "@/components/SocialIcon";
 import { BlogCard } from "@/components/blog/BlogCard";
 import { categoryKanji, formatDateLong } from "@/lib/blog-utils";
 import { getPostFn } from "@/lib/content.functions";
-import { externalLinkProps, heroSocials } from "@/lib/socials";
+import { externalLinkProps, heroSocials, profileLinkProps } from "@/lib/socials";
 import "@/styles-blog.css";
 
 export const Route = createFileRoute("/blog/$slug")({
@@ -240,7 +240,7 @@ function ArticlePage() {
               <p className="author-role mono">CREATIVE DEVELOPER × CYBERSECURITY</p>
               <div className="author-links">
                 {heroSocials.map(({ id, label, href }) => (
-                  <a key={id} href={href} {...externalLinkProps} aria-label={label} title={label}>
+                  <a key={id} href={href} {...profileLinkProps} aria-label={label} title={label}>
                     <SocialIcon name={id} size={15} />
                   </a>
                 ))}

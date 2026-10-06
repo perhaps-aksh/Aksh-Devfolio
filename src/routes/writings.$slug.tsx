@@ -9,7 +9,7 @@ import { TableOfContents } from "@/components/writings/TableOfContents";
 import { WritingCard } from "@/components/writings/WritingCard";
 import { formatDateLong } from "@/lib/blog-utils";
 import { getWritingFn } from "@/lib/content.functions";
-import { externalLinkProps, heroSocials } from "@/lib/socials";
+import { externalLinkProps, heroSocials, profileLinkProps } from "@/lib/socials";
 // Reuses the blog article's shared chrome (kicker/meta/tags/cover/footer/author-card/share-row/.prose)
 // so the two reading experiences stay visually related; styles-writings.css adds only what's new here.
 import "@/styles-blog.css";
@@ -267,7 +267,7 @@ function WritingPage() {
               <p className="author-role mono">CREATIVE DEVELOPER × CYBERSECURITY</p>
               <div className="author-links">
                 {heroSocials.map(({ id, label, href }) => (
-                  <a key={id} href={href} {...externalLinkProps} aria-label={label} title={label}>
+                  <a key={id} href={href} {...profileLinkProps} aria-label={label} title={label}>
                     <SocialIcon name={id} size={15} />
                   </a>
                 ))}

@@ -104,5 +104,12 @@ export const socials: readonly SocialLink[] = [
 
 export const heroSocials = socials.filter((s) => s.hero);
 
-/** Attributes for every outbound profile link. */
+/** Attributes for a generic outbound link (share actions, etc.) — not an identity claim. */
 export const externalLinkProps = { target: "_blank", rel: "noopener noreferrer" } as const;
+
+/**
+ * Attributes for a link to one of *this person's own* profiles. `rel="me"` is the IndieWeb/HTML
+ * convention bots and identity-verification tools (Mastodon, etc.) use to confirm two pages represent
+ * the same person — paired with the `sameAs` list in the home page's Person JSON-LD.
+ */
+export const profileLinkProps = { target: "_blank", rel: "me noopener noreferrer" } as const;

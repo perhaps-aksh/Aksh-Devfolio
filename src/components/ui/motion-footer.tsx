@@ -113,7 +113,8 @@ function Pill({
         href={href}
         className={cls}
         {...(label ? { "aria-label": label, title: label } : {})}
-        {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+        /* `external` here is only ever used for this person's own profile links. */
+        {...(external ? { target: "_blank", rel: "me noopener noreferrer" } : {})}
       >
         {children}
       </a>
