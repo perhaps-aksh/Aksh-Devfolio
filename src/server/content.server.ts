@@ -122,11 +122,14 @@ function toSummary(row: PostRow, maps: StructureMaps): PostSummary {
 
 // --- queries -------------------------------------------------------------------------------------
 
+const HOME_POST_LIMIT = 4;
+
 const emptyHome = (): HomeContent => ({
   projects: [],
   posts: [],
   writings: [],
   site: defaultSiteContent(),
+  siteUrl: siteOrigin(),
 });
 
 /** Latest published writings for the home page. Never throws: the writings tables may not exist yet. */
@@ -161,7 +164,9 @@ export async function getHomeContent(): Promise<HomeContent> {
           .eq("published", true)
           .order("display_order", { ascending: true })
           .order("created_at", { ascending: true }),
-        livePosts(db, SUMMARY_COLUMNS).order("published_at", { ascending: false }).limit(6),
+        livePosts(db, SUMMARY_COLUMNS)
+          .order("published_at", { ascending: false })
+          .limit(HOME_POST_LIMIT),
         loadHomeWritings(db),
         loadSiteContent(db),
         getStructureMaps(),
@@ -171,6 +176,7 @@ export async function getHomeContent(): Promise<HomeContent> {
         posts: unwrap<PostRow[]>(posts as Result<PostRow[]>).map((r) => toSummary(r, maps)),
         writings,
         site,
+        siteUrl: siteOrigin(),
       };
     });
   } catch (error) {

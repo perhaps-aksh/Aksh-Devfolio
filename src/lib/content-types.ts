@@ -75,4 +75,5 @@ export type HomeContent = {
   posts: PostSummary[];
   writings: HomeWriting[];
   site: SiteContent;
+  siteUrl: string;
 };

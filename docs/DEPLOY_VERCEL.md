@@ -52,6 +52,14 @@ it unset in production.
 Push to the connected branch (or run `vercel --prod`). Vercel runs the build command above
 and deploys the resulting serverless function (Node.js runtime) plus static assets.
 
+## 5. Turn on Web Analytics
+
+`@vercel/analytics` is already installed and wired into the root layout (`<Analytics/>` from
+`@vercel/analytics/react`), but it only collects data once **Web Analytics** is turned on for
+the project in the Vercel dashboard (Project → Analytics tab) — that's a separate, manual,
+one-time step the code can't do for you. Until then (or anywhere not actually served by
+Vercel, e.g. local dev) the component safely no-ops.
+
 ## Notes
 
 - The output is the same Nitro-built server as the Cloudflare deploy, just targeting

@@ -31,23 +31,38 @@ export const Route = createFileRoute("/")({
   // unreachable, so the page never breaks — see src/server/content.server.ts.
   loader: () => getHomeContentFn(),
   staleTime: 60_000,
-  head: () => ({
-    meta: [
-      { title: "AKSH — Cybersecurity × Creative Developer" },
-      {
-        name: "description",
-        content:
-          "AKSH is a creative developer and cybersecurity enthusiast in India building expressive, secure digital experiences.",
-      },
-      { property: "og:title", content: "AKSH — Cybersecurity × Creative Developer" },
-      {
-        property: "og:description",
-        content: "What if, is where I begin. Creative development and security research by AKSH.",
-      },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary_large_image" },
-    ],
-  }),
+  head: ({ loaderData }) => {
+    const siteUrl = loaderData?.siteUrl ?? "";
+    const title = "Chitraksh Kumar (AKSH) — Creative Developer & Cybersecurity Researcher";
+    const description =
+      "Chitraksh Kumar, known online as AKSH, is a creative developer and cybersecurity researcher in India building expressive, secure digital experiences.";
+    const jsonLd = {
+      "@context": "https://schema.org",
+      "@type": "Person",
+      name: "Chitraksh Kumar",
+      alternateName: "AKSH",
+      url: siteUrl || undefined,
+      jobTitle: "Creative Developer & Cybersecurity Researcher",
+      description,
+      sameAs: socials.map((s) => s.href),
+    };
+    return {
+      meta: [
+        { title },
+        { name: "description", content: description },
+        { property: "og:title", content: title },
+        {
+          property: "og:description",
+          content: "What if, is where I begin. Creative development and security research by AKSH.",
+        },
+        { property: "og:type", content: "website" },
+        { name: "twitter:card", content: "summary_large_image" },
+      ],
+      scripts: [
+        { type: "application/ld+json", children: JSON.stringify(jsonLd).replace(/</g, "\\u003c") },
+      ],
+    };
+  },
   component: Index,
 });
 
@@ -460,6 +475,10 @@ function Hero({ start = true }: { start?: boolean }) {
       ref={stageRef as React.RefObject<HTMLElement>}
     >
       <div className="scan-line" aria-hidden="true" />
+
+      <h1 className="sr-only">
+        Chitraksh Kumar (AKSH) — Creative Developer &amp; Cybersecurity Researcher
+      </h1>
 
       <div className="coordinate mono hero-ui">
         <Crosshair />

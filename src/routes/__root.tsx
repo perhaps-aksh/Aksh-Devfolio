@@ -1,3 +1,4 @@
+import { Analytics } from "@vercel/analytics/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   Outlet,
@@ -90,10 +91,18 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "AKSH — Maverick Creative Developer" },
-      { name: "description", content: "Creative development by AKSH." },
-      { name: "author", content: "AKSH" },
-      { property: "og:title", content: "AKSH — Maverick Creative Developer" },
+      { title: "Chitraksh Kumar (AKSH) — Creative Developer & Cybersecurity Researcher" },
+      {
+        name: "description",
+        content:
+          "Chitraksh Kumar, known online as AKSH — creative developer and cybersecurity researcher.",
+      },
+      { name: "author", content: "Chitraksh Kumar" },
+      { name: "google-site-verification", content: "x2c4VALvLcrXPI-_3DXC-68eEsoRl8Tmuuu0UzLdGbA" },
+      {
+        property: "og:title",
+        content: "Chitraksh Kumar (AKSH) — Creative Developer & Cybersecurity Researcher",
+      },
       { property: "og:description", content: "What if, is where I begin." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -147,6 +156,8 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
       <Outlet />
+      {/* No-ops unless actually deployed on Vercel. */}
+      <Analytics />
     </QueryClientProvider>
   );
 }
